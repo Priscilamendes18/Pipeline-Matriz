@@ -1,0 +1,206 @@
+name: Pipeline CI - Calculadora com Matrix
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  teste:
+    name: Teste - ${{ matrix.os }} - Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os:
+          - ubuntu-22.04
+          - ubuntu-24.04
+          - ubuntu-26.04
+        python-version:
+          - "3.11"
+          - "3.12"
+
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Mostrar ambiente
+        run: |
+          echo "Sistema operacional:"
+          lsb_release -a
+          echo "Versão do Python:"
+          python --version
+
+      - name: Instalar dependências
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Análise de código - Flake8
+        run: flake8 calculadora.py test_*.py
+
+      - name: Testes unitários
+        run: pytest test_*.py
+
+      - name: Cobertura de código
+        run: pytest --cov=calculadora --cov-report=term-missing --cov-fail-under=80
+
+      - name: Análise de segurança - Bandit
+        run: bandit -r calculadora.py
+
+      - name: Verificar chaves de API expostas
+        run: |
+          if grep -R -nE 'API_KEY[[:space:]]*=[[:space:]]*["'\''][^"'\''']+["'\'']' . \
+            --exclude-dir=.git \
+            --exclude=pipeline.yml; then
+            echo "ERRO: Chave de API encontrada!"
+            exit 1
+          else
+            echo "Nenhuma chave de API encontrada."
+          fi
+  teste_soma:
+    name: Teste - Soma
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Linter
+        run: flake8 calculadora.py test_soma.py
+
+      - name: Teste unitário - Soma
+        run: pytest test_soma.py
+
+      - name: Análise de segurança
+        run: bandit -r calculadora.py
+
+
+  teste_subtracao:
+    name: Teste - Subtração
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Linter
+        run: flake8 calculadora.py test_subtracao.py
+
+      - name: Teste unitário - Subtração
+        run: pytest test_subtracao.py
+
+      - name: Análise de segurança
+        run: bandit -r calculadora.py
+
+
+  teste_multiplicacao:
+    name: Teste - Multiplicação
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Linter
+        run: flake8 calculadora.py test_multiplicacao.py
+
+      - name: Teste unitário - Multiplicação
+        run: pytest test_multiplicacao.py
+
+      - name: Análise de segurança
+        run: bandit -r calculadora.py
+
+
+  teste_divisao:
+    name: Teste - Divisão
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Linter
+        run: flake8 calculadora.py test_divisao.py
+
+      - name: Teste unitário - Divisão
+        run: pytest test_divisao.py
+
+      - name: Análise de segurança
+        run: bandit -r calculadora.py
+
+
+  cobertura:
+    name: Cobertura de Código
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Executar testes com cobertura
+        run: pytest --cov=calculadora --cov-report=term-missing --cov-fail-under=80
+
+
+  seguranca:
+    name: Segurança - Chaves Expostas
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v4
+
+      - name: Verificar chave de API
+        run: |
+          if grep -R -nE 'API_KEY[[:space:]]*=[[:space:]]*["'\''][^"'\'']+["'\'']' . \
+            --exclude-dir=.git \
+            --exclude=pipeline.yml; then
+            echo "ERRO: Chave de API encontrada!"
+            exit 1
+          else
+            echo "Nenhuma chave de API encontrada."
+          fi
