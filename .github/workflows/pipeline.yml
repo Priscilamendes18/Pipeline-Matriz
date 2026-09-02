@@ -65,7 +65,7 @@ jobs:
 
       - name: Verificar chaves de API expostas
         run: |
-          if grep -R -nE 'API_KEY[[:space:]]*=[[:space:]]*["'\''][^"'\''']+["'\'']' . \
+          if grep -R -nE "API_KEY[[:space:]]*=[[:space:]]*['\"][^'\"]+['\"]" . \
             --exclude-dir=.git \
             --exclude=pipeline.yml; then
 
