@@ -47,6 +47,22 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+# Acrescentar steps no Build
+      - name: Publicar artefato
+        uses: actions/upload-artifact@v4
+        with:
+        name: codigo-buildado
+        path: pipeline-demo.zip
+
+# Acrescentar steps no test
+      - name: Baixar artefato
+        uses: actions/download-artifact@v4
+        with:
+        name: codigo-buildado
+
+      - name: Extrair artefato
+        run: unzip pipeline-demo.zip
+
       - name: Análise de código - Flake8
         run: |
           flake8 calculadora.py test_*.py
@@ -82,22 +98,3 @@ jobs:
         uses: SonarSource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995 # v8.1.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
-      - name: Gerar artefato ZIP
-        run: zip -r pipeline-demo.zip
-
-# Acrescentar steps no Build
-      - name: Publicar artefato
-        uses: actions/upload-artifact@v4
-        with:
-        name: codigo-buildado
-        path: pipeline-demo.zip
-
-# Acrescentar steps no test
-      - name: Baixar artefato
-        uses: actions/download-artifact@v4
-        with:
-        name: codigo-buildado
-
-      - name: Extrair artefato
-        run: unzip pipeline-demo.zip
