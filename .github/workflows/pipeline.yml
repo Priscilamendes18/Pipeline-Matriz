@@ -142,4 +142,4 @@ jobs:
   runs-on: ubuntu-latest
   needs: test
   environment:
-    mame: production
+    name: production
