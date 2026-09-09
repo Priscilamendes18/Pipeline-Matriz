@@ -5,8 +5,9 @@ on:
     branches: [main]
 
 jobs:
-  teste:
-    name: Teste - ${{ matrix.os }} - Python ${{ matrix.python-version }}
+
+  build:
+    name: Build - ${{ matrix.os }} - Python ${{ matrix.python-version }}
 
     runs-on: ${{ matrix.os }}
 
@@ -32,7 +33,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          cache: 'pip'
+          cache: pip
 
       - name: Mostrar ambiente
         run: |
@@ -47,21 +48,59 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-# Acrescentar steps no Build
+      - name: Criar artefato
+        run: |
+          zip pipeline-demo.zip calculadora.py test_*.py requirements.txt
+
       - name: Publicar artefato
         uses: actions/upload-artifact@v4
         with:
-        name: codigo-buildado
-        path: pipeline-demo.zip
+          name: codigo-buildado-${{ matrix.os }}-python-${{ matrix.python-version }}
+          path: pipeline-demo.zip
 
-# Acrescentar steps no test
+
+  test:
+    name: Testes - ${{ matrix.os }} - Python ${{ matrix.python-version }}
+
+    needs: build
+
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os:
+          - ubuntu-22.04
+          - ubuntu-24.04
+          - ubuntu-26.04
+
+        python-version:
+          - "3.11"
+          - "3.12"
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Instalar dependências
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
       - name: Baixar artefato
         uses: actions/download-artifact@v4
         with:
-        name: codigo-buildado
+          name: codigo-buildado-${{ matrix.os }}-python-${{ matrix.python-version }}
 
       - name: Extrair artefato
-        run: unzip pipeline-demo.zip
+        run: unzip -o pipeline-demo.zip
 
       - name: Análise de código - Flake8
         run: |
