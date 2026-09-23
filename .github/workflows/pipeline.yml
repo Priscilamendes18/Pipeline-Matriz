@@ -1,3 +1,4 @@
+```yaml
 name: Pipeline CI - Calculadora com Matrix
 
 on:
@@ -5,6 +6,10 @@ on:
     branches: [main]
 
 jobs:
+
+  # =========================
+  # BUILD
+  # =========================
 
   build:
     name: Build - ${{ matrix.os }} - Python ${{ matrix.python-version }}
@@ -24,16 +29,28 @@ jobs:
 
     steps:
 
+      # =========================
+      # CHECKOUT
+      # =========================
+
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      # =========================
+      # PYTHON + CACHE
+      # =========================
+
       - name: Configurar Python
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
+
+      # =========================
+      # VERSÕES
+      # =========================
 
       - name: Mostrar ambiente
         run: |
@@ -43,21 +60,41 @@ jobs:
           echo "Versão do Python:"
           python --version
 
+          echo "Versão do pip:"
+          pip --version
+
+      # =========================
+      # DEPENDÊNCIAS
+      # =========================
+
       - name: Instalar dependências
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install pytest pytest-cov flake8 bandit
+
+      # =========================
+      # GERAR ARTEFATO
+      # =========================
 
       - name: Criar artefato
         run: |
           zip pipeline-demo.zip calculadora.py test_*.py requirements.txt
 
+      # =========================
+      # PUBLICAR ARTEFATO
+      # =========================
+
       - name: Publicar artefato
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@v4
         with:
           name: codigo-buildado-${{ matrix.os }}-python-${{ matrix.python-version }}
           path: pipeline-demo.zip
 
+
+  # =========================
+  # TESTES
+  # =========================
 
   test:
     name: Testes - ${{ matrix.os }} - Python ${{ matrix.python-version }}
@@ -77,51 +114,53 @@ jobs:
           - "3.11"
           - "3.12"
 
-          - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995 # v8.1.0
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
-  deploy:
-    runs-on: ubuntu-latest
-
-    needs: test
-
-    environment:
-      name: production
-
     steps:
 
+      # =========================
+      # CHECKOUT
+      # =========================
+
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          fetch-depth: 0
+        uses: actions/checkout@v4
+
+      # =========================
+      # PYTHON
+      # =========================
 
       - name: Configurar Python
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+
+      # =========================
+      # DEPENDÊNCIAS
+      # =========================
 
       - name: Instalar dependências
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install pytest pytest-cov flake8 bandit
 
-      - name: Baixar artefato
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: codigo-buildado-${{ matrix.os }}-python-${{ matrix.python-version }}
-
-      - name: Extrair artefato
-        run: unzip -o pipeline-demo.zip
+      # =========================
+      # LINTER
+      # =========================
 
       - name: Análise de código - Flake8
         run: |
           flake8 calculadora.py test_*.py
 
+      # =========================
+      # TESTES UNITÁRIOS
+      # =========================
+
       - name: Testes unitários
         run: |
           pytest test_*.py
+
+      # =========================
+      # COBERTURA
+      # =========================
 
       - name: Cobertura de código
         run: |
@@ -129,9 +168,17 @@ jobs:
             --cov-report=term-missing \
             --cov-fail-under=80
 
+      # =========================
+      # SEGURANÇA - BANDIT
+      # =========================
+
       - name: Análise de segurança - Bandit
         run: |
           bandit -r calculadora.py
+
+      # =========================
+      # VERIFICAÇÃO DE CHAVES
+      # =========================
 
       - name: Verificar chaves de API expostas
         run: |
@@ -143,5 +190,102 @@ jobs:
             exit 1
 
           else
+
             echo "Nenhuma chave de API encontrada."
+
           fi
+
+
+  # =========================
+  # SONARQUBE
+  # =========================
+
+  sonar:
+    name: SonarQube
+
+    needs: test
+
+    runs-on: ubuntu-24.04
+
+    steps:
+
+      # =========================
+      # CHECKOUT
+      # =========================
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # =========================
+      # SONARQUBE SCAN
+      # =========================
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v8
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+
+  # =========================
+  # DEPLOY
+  # =========================
+
+  deploy:
+    name: Deploy
+
+    runs-on: ubuntu-latest
+
+    needs: [test, sonar]
+
+    environment:
+      name: production
+
+    steps:
+
+      # =========================
+      # CHECKOUT
+      # =========================
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # =========================
+      # BAIXAR ARTEFATOS
+      # =========================
+
+      - name: Baixar artefatos
+        uses: actions/download-artifact@v4
+        with:
+          pattern: codigo-buildado-*
+          path: artefatos
+          merge-multiple: true
+
+      # =========================
+      # VERIFICAR ARTEFATOS
+      # =========================
+
+      - name: Verificar artefatos
+        run: |
+          echo "Artefatos disponíveis:"
+          ls -lah artefatos
+
+      # =========================
+      # EXTRAIR ARTEFATO
+      # =========================
+
+      - name: Extrair artefato
+        run: |
+          mkdir -p deploy
+          unzip -o artefatos/pipeline-demo.zip -d deploy
+
+      # =========================
+      # VERIFICAR ARQUIVOS
+      # =========================
+
+      - name: Verificar arquivos
+        run: |
+          echo "Arquivos do deploy:"
+          ls -lah deploy
+```
