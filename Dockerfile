@@ -9,4 +9,4 @@ COPY . .
 
 EXPOSE 5000
 
-CMD ["python, "calculadora.py"]
+CMD ["python", "calculadora.py"]
