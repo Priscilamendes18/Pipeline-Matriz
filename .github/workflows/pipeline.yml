@@ -1,4 +1,3 @@
-```yaml
 name: Pipeline CI - Calculadora com Matrix
 
 on:
@@ -288,4 +287,3 @@ jobs:
         run: |
           echo "Arquivos do deploy:"
           ls -lah deploy
-```
